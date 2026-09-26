@@ -1,35 +1,39 @@
 # Weather App
 
-A mobile weather app built with React Native, Expo, TypeScript, and Expo Router. This project is being developed incrementally as a learning-by-building project.
+I'm building this app one step at a time to learn mobile app development with React Native, Expo, and TypeScript. I already have experience building web apps, so this project is a chance to put that knowledge to work on a phone app.
 
-## Current Features
+## What the app does so far
 
-- Weather home screen for Pune, Maharashtra
-- Current conditions and humidity, wind, and pressure details
-- Horizontally scrolling hourly forecast
-- Static sample weather data (live API integration is the next milestone)
+The home screen shows sample weather for Pune, India. It includes the temperature, conditions, feels-like temperature, humidity, wind, pressure, and a row of hourly forecast cards. The weather is sample data for now; connecting a real weather service is the next step.
 
-## Run Locally
+## Run the app
+
+Install the project packages, then start Expo:
 
 ```bash
 npm install
 npx expo start
 ```
 
-Use the Expo CLI prompt to open the app in Expo Go, an emulator, or a simulator. Android, iOS, and web scripts are also available through `npm run android`, `npm run ios`, and `npm run web`.
+Follow the instructions in the terminal to open the app on a phone or simulator. You can also run `npm run android`, `npm run ios`, or `npm run web`.
 
-## Project Structure
+## Seven-day challenge
 
-```text
-src/
-   app/
-      _layout.tsx
-      index.tsx
-```
+- [x] **Day 1: Build the screen.** Set up the app and make the first weather screen with sample data.
+- [ ] **Day 2: Get real weather.** Connect a weather service and show loading and error messages.
+- [ ] **Day 3: Use phone location.** Ask for permission and show weather for the phone's location.
+- [ ] **Day 4: Search for a city.** Let people look up weather in another place.
+- [ ] **Day 5: Add forecasts.** Show real hourly and daily forecasts.
+- [ ] **Day 6: Handle rough edges.** Improve the app for different weather, lost internet, and denied location access.
+- [ ] **Day 7: Review and share.** Check the app, tidy the code, update this README, and share the finished progress on GitHub.
 
-The app uses Expo Router's file-based routing. The home screen is in `src/app/index.tsx`, with the default navigation header hidden in `src/app/_layout.tsx`.
+## Project files
 
-## Development Checks
+The screens are in `src/app`. The main weather screen is `src/app/index.tsx`, and `src/app/_layout.tsx` sets up navigation.
+
+## Checks
+
+Run these commands to check the code:
 
 ```bash
 npm run lint
