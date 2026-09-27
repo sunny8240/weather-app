@@ -5,9 +5,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Pressable,
   View,
 } from "react-native";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { fetchPuneWeather } from "@/services/weatherApi";
+import { CurrentWeather } from "@/types/weather";
 
 const hourlyForecast = [
   {
@@ -42,7 +46,63 @@ const hourlyForecast = [
   },
 ];
 
+type WeatherIconName = keyof typeof Ionicons.glyphMap;
+
+function getWeatherCondition(weatherCode: number): string {
+  if (weatherCode === 0) return "Clear";
+  if ([1, 2, 3].includes(weatherCode)) return "Cloudy";
+  if ([45, 48].includes(weatherCode)) return "Foggy";
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) {
+    return "Rainy";
+  }
+  if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) return "Snowy";
+  if ([95, 96, 99].includes(weatherCode)) return "Stormy";
+  return "Unknown";
+}
+
+function getWeatherIcon(weatherCode: number): WeatherIconName {
+  if (weatherCode === 0) return "sunny-outline";
+  if ([95, 96, 99].includes(weatherCode)) return "thunderstorm-outline";
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) {
+    return "rainy-outline";
+  }
+  return "cloudy-outline";
+}
+
 export default function HomeScreen() {
+  const [weather, setWeather] = useState<CurrentWeather | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadWeather() {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const currentWeather = await fetchPuneWeather();
+      setWeather(currentWeather);
+    } catch {
+      setError("We couldn't load the weather. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchPuneWeather()
+      .then((currentWeather) => {
+        setWeather(currentWeather);
+      })
+      .catch(() => {
+        setError("We couldn't load the weather. Please try again.");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  const condition = weather ? getWeatherCondition(weather.weatherCode) : "";
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#696666a8" }}>
       <ScrollView
@@ -54,7 +114,9 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.location}>Pune, Maharashtra</Text>
-            <Text style={styles.subtitle}>Current weather</Text>
+            <Text style={styles.subtitle}>
+              {isLoading ? "Loading weather..." : "Current weather"}
+            </Text>
           </View>
 
           <Ionicons
@@ -64,43 +126,56 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* Current Weather */}
-        <View style={styles.currentWeather}>
-          <Ionicons
-            name="sunny-outline"
-            size={72}
-            color="#222"
-          />
-
-          <Text style={styles.temperature}>28°</Text>
-
-          <Text style={styles.condition}>Sunny</Text>
-
-          <Text style={styles.feelsLike}>
-            Feels like 30°
-          </Text>
-        </View>
-
-        {/* Weather Details */}
-        <View style={styles.detailsCard}>
-          <View style={styles.detailItem}>
-            <Ionicons name="water-outline" size={22} color="#222" />
-            <Text style={styles.detailLabel}>Humidity</Text>
-            <Text style={styles.detailValue}>65%</Text>
+        {error ? (
+          <View style={styles.statusContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable style={styles.retryButton} onPress={loadWeather}>
+              <Text style={styles.retryText}>Try again</Text>
+            </Pressable>
           </View>
-
-          <View style={styles.detailItem}>
-            <Feather name="wind" size={24} color="black" />
-            <Text style={styles.detailLabel}>Wind</Text>
-            <Text style={styles.detailValue}>12 km/h</Text>
+        ) : isLoading ? (
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusText}>Getting the latest weather...</Text>
           </View>
+        ) : weather ? (
+          <>
+            <View style={styles.currentWeather}>
+              <Ionicons
+                name={getWeatherIcon(weather.weatherCode)}
+                size={72}
+                color="#222"
+              />
 
-          <View style={styles.detailItem}>
-            <Ionicons name="speedometer-outline" size={22} color="#222" />
-            <Text style={styles.detailLabel}>Pressure</Text>
-            <Text style={styles.detailValue}>1012 hPa</Text>
-          </View>
-        </View>
+              <Text style={styles.temperature}>{Math.round(weather.temperature)}°</Text>
+
+              <Text style={styles.condition}>{condition}</Text>
+
+              <Text style={styles.feelsLike}>
+                Feels like {Math.round(weather.apparentTemperature)}°
+              </Text>
+            </View>
+
+            <View style={styles.detailsCard}>
+              <View style={styles.detailItem}>
+                <Ionicons name="water-outline" size={22} color="#222" />
+                <Text style={styles.detailLabel}>Humidity</Text>
+                <Text style={styles.detailValue}>{weather.humidity}%</Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Feather name="wind" size={24} color="black" />
+                <Text style={styles.detailLabel}>Wind</Text>
+                <Text style={styles.detailValue}>{Math.round(weather.windSpeed)} km/h</Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Ionicons name="speedometer-outline" size={22} color="#222" />
+                <Text style={styles.detailLabel}>Pressure</Text>
+                <Text style={styles.detailValue}>{Math.round(weather.pressure)} hPa</Text>
+              </View>
+            </View>
+          </>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Hourly Forecast</Text>
@@ -170,6 +245,36 @@ const styles = StyleSheet.create({
   currentWeather: {
     alignItems: "center",
     marginBottom: 35,
+  },
+
+  statusContainer: {
+    alignItems: "center",
+    minHeight: 280,
+    justifyContent: "center",
+  },
+
+  statusText: {
+    color: "#777",
+    fontSize: 16,
+  },
+
+  errorText: {
+    color: "#a33",
+    fontSize: 16,
+    textAlign: "center",
+  },
+
+  retryButton: {
+    backgroundColor: "#222",
+    borderRadius: 8,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+
+  retryText: {
+    color: "#fff",
+    fontWeight: "600",
   },
 
   temperature: {
