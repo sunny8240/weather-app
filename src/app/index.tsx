@@ -1,9 +1,16 @@
-import { fetchPuneWeather } from "@/services/weatherApi";
+import {
+  fetchPuneWeather,
+  fetchWeatherByCoordinates,
+  PUNE_COORDINATES,
+} from "@/services/weatherApi";
 import { CurrentWeather } from "@/types/weather";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
-import { useEffect, useState } from "react";
+import * as Location from "expo-location";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Animated,
+  Easing,
   FlatList,
   Pressable,
   ScrollView,
@@ -40,30 +47,107 @@ function getWeatherIcon(weatherCode: number): WeatherIconName {
   return "cloudy-outline";
 }
 
+function formatLocationName(
+  location: Location.LocationGeocodedAddress | null,
+): string {
+  if (!location) {
+    return "Current location";
+  }
+
+  const mainPlace = location.city ?? location.subregion ?? location.region ?? "Current location";
+  const extras = [location.region, location.country].filter(
+    (value): value is string => Boolean(value) && value !== mainPlace,
+  );
+
+  return [mainPlace, ...extras].join(", ");
+}
+
 export default function HomeScreen() {
   const [weather, setWeather] = useState<CurrentWeather | null>(null);
+  const [locationName, setLocationName] = useState("Pune, Maharashtra");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pulseAnim = useMemo(() => new Animated.Value(0.7), []);
 
   async function loadWeather() {
     setIsLoading(true);
     setError(null);
 
     try {
-      setWeather(await fetchPuneWeather());
+      let latitude = PUNE_COORDINATES.latitude;
+      let longitude = PUNE_COORDINATES.longitude;
+      let resolvedLocationName = "Pune, Maharashtra";
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status === "granted") {
+        const currentPosition = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Low,
+        });
+
+        latitude = currentPosition.coords.latitude;
+        longitude = currentPosition.coords.longitude;
+
+        const [geoLocation] = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+
+        resolvedLocationName = formatLocationName(geoLocation);
+      }
+
+      setLocationName(resolvedLocationName);
+      setWeather(await fetchWeatherByCoordinates({ latitude, longitude }));
     } catch {
-      setError("We couldn't load the weather. Please try again.");
+      setLocationName("Pune, Maharashtra");
+      setWeather(await fetchPuneWeather());
+      setError(null);
     } finally {
       setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchPuneWeather()
-      .then(setWeather)
-      .catch(() => setError("We couldn't load the weather. Please try again."))
-      .finally(() => setIsLoading(false));
+    const startLoad = async () => {
+      await loadWeather();
+    };
+
+    void startLoad();
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      pulseAnim.stopAnimation();
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.72,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    loop.start();
+
+    return () => loop.stop();
+  }, [isLoading, pulseAnim]);
 
   const condition = weather ? getWeatherCondition(weather.weatherCode) : "";
 
@@ -76,10 +160,12 @@ export default function HomeScreen() {
       >
         <View className="flex-row items-center justify-between border-b border-[#d7e1dc] pb-5">
           <View className="flex-row items-center">
-            <Ionicons name="location-outline" size={19} color="#52796c" />
-            <View className="ml-2.5">
+            <View className="mr-2.5 h-9 w-9 items-center justify-center rounded-full bg-[#dfece5]">
+              <Ionicons name="location-outline" size={18} color="#52796c" />
+            </View>
+            <View>
               <Text className="text-[11px] font-semibold uppercase text-[#52796c]">Local forecast</Text>
-              <Text className="mt-0.5 text-lg font-semibold text-[#1b2b26]">Pune, Maharashtra</Text>
+              <Text className="mt-0.5 text-lg font-semibold text-[#1b2b26]">{locationName}</Text>
             </View>
           </View>
           <View className="flex-row items-center rounded-full bg-[#dcebe3] px-3 py-1.5">
@@ -90,31 +176,56 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="border-b border-[#d7e1dc] py-8">
+        <View className="pt-6">
           <Text className="text-[11px] font-semibold uppercase text-[#789087]">Current conditions</Text>
           {error ? (
-            <View className="mt-8 min-h-[150px] justify-center">
+            <View className="mt-5 min-h-[180px] justify-center rounded-[28px] border border-[#ead7d3] bg-[#fbf5f4] p-5">
               <Text className="text-base leading-6 text-[#812f28]">{error}</Text>
-              <Pressable className="mt-4 self-start border-b border-[#365f51] pb-1" onPress={loadWeather}>
-                <Text className="text-sm font-semibold text-[#365f51]">Try again</Text>
+              <Pressable className="mt-5 self-start rounded-full bg-[#365f51] px-4 py-2" onPress={loadWeather}>
+                <Text className="text-sm font-semibold text-white">Try again</Text>
               </Pressable>
             </View>
           ) : isLoading ? (
-            <View className="mt-8 min-h-[150px] justify-center">
-              <Text className="text-base text-[#708078]">Getting the latest weather...</Text>
-            </View>
-          ) : weather ? (
-            <View className="mt-5 flex-row items-center justify-between">
-              <View>
-                <Text className="text-[84px] leading-[92px] font-light text-[#1b2b26]">
-                  {Math.round(weather.temperature)}°
-                </Text>
-                <Text className="mt-1 text-xl font-medium text-[#30483e]">{condition}</Text>
-                <Text className="mt-1.5 text-sm text-[#708078]">
-                  Feels like {Math.round(weather.apparentTemperature)}°
-                </Text>
+            <Animated.View
+              style={{ opacity: pulseAnim, transform: [{ scale: pulseAnim }] }}
+              className="mt-5 min-h-[180px] justify-center rounded-[28px] border border-[#dfe9e2] bg-[#f7faf8] p-5"
+            >
+              <View className="items-center">
+                <Animated.View
+                  style={{ opacity: pulseAnim }}
+                  className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-[#dfeee6]"
+                >
+                  <Ionicons name="cloud-download-outline" size={36} color="#365f51" />
+                </Animated.View>
+                <Text className="text-lg font-semibold text-[#29463d]">Fetching the latest weather</Text>
+                <Text className="mt-2 text-sm text-[#708078]">Checking the sky and your location...</Text>
+                <View className="mt-4 flex-row items-center">
+                  {[0, 1, 2].map((item) => (
+                    <Animated.View
+                      key={item}
+                      style={{ opacity: pulseAnim, transform: [{ translateY: pulseAnim.interpolate({ inputRange: [0.7, 1], outputRange: [4, 0] }) }] }}
+                      className={`mx-1 h-2.5 w-2.5 rounded-full ${item === 0 ? "bg-[#9cb8ae]" : item === 1 ? "bg-[#6c9488]" : "bg-[#365f51]"}`}
+                    />
+                  ))}
+                </View>
               </View>
-              <Ionicons name={getWeatherIcon(weather.weatherCode)} size={68} color="#d28a35" />
+            </Animated.View>
+          ) : weather ? (
+            <View className="mt-5 overflow-hidden rounded-[28px] border border-[#d7e1dc] bg-[#f8fbf9] p-5 shadow-sm shadow-[#d7e1dc]">
+              <View className="flex-row items-center justify-between">
+                <View>
+                  <Text className="text-[84px] leading-[92px] font-light text-[#1b2b26]">
+                    {Math.round(weather.temperature)}°
+                  </Text>
+                  <Text className="mt-1 text-xl font-medium text-[#30483e]">{condition}</Text>
+                  <Text className="mt-1.5 text-sm text-[#708078]">
+                    Feels like {Math.round(weather.apparentTemperature)}°
+                  </Text>
+                </View>
+                <View className="h-20 w-20 items-center justify-center rounded-full bg-[#f3e9d6]">
+                  <Ionicons name={getWeatherIcon(weather.weatherCode)} size={60} color="#d28a35" />
+                </View>
+              </View>
             </View>
           ) : null}
         </View>
@@ -125,7 +236,7 @@ export default function HomeScreen() {
             <Text className="text-xs text-[#789087]">NOW</Text>
           </View>
           {weather ? (
-            <View className="flex-row">
+            <View className="flex-row rounded-[24px] border border-[#d7e1dc] bg-white p-3">
               <WeatherDetail
                 icon={<Ionicons name="water-outline" size={18} color="#52796c" />}
                 label="Humidity"
@@ -158,7 +269,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.time}
           contentContainerStyle={{ paddingRight: 20 }}
           renderItem={({ item }) => (
-            <View className={`mr-2.5 min-h-[108px] w-[72px] items-center justify-center rounded-md border px-2 py-3 ${item.time === "Now" ? "border-[#365f51] bg-[#365f51]" : "border-[#d7e1dc] bg-white"}`}>
+            <View className={`mr-2.5 min-h-[108px] w-[72px] items-center justify-center rounded-xl border px-2 py-3 ${item.time === "Now" ? "border-[#365f51] bg-[#365f51]" : "border-[#d7e1dc] bg-white"}`}>
               <Text className={`text-xs ${item.time === "Now" ? "font-semibold text-white" : "text-[#708078]"}`}>
                 {item.time}
               </Text>

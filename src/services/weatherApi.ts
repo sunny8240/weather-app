@@ -1,16 +1,24 @@
 import { CurrentWeather, OpenMeteoResponse } from "@/types/weather";
 
-const PUNE_COORDINATES = {
+export type Coordinates = {
+    latitude: number;
+    longitude: number;
+};
+
+export const PUNE_COORDINATES: Coordinates = {
     latitude: 18.5204,
     longitude: 73.8567,
 };
 
 const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
 
-export async function fetchPuneWeather(): Promise<CurrentWeather> {
+export async function fetchWeatherByCoordinates({
+    latitude,
+    longitude,
+}: Coordinates): Promise<CurrentWeather> {
     const query = new URLSearchParams({
-        latitude: String(PUNE_COORDINATES.latitude),
-        longitude: String(PUNE_COORDINATES.longitude),
+        latitude: String(latitude),
+        longitude: String(longitude),
         current:
             "temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,weather_code",
         timezone: "auto",
@@ -32,4 +40,8 @@ export async function fetchPuneWeather(): Promise<CurrentWeather> {
         pressure: data.current.surface_pressure,
         weatherCode: data.current.weather_code,
     };
+}
+
+export async function fetchPuneWeather(): Promise<CurrentWeather> {
+    return fetchWeatherByCoordinates(PUNE_COORDINATES);
 }

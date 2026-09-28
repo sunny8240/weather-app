@@ -21,7 +21,7 @@ Follow the instructions in the terminal to open the app on a phone or simulator.
 
 - [x] **Day 1: Build the screen.** Set up the app and make the first weather screen with sample data.
 - [x] **Day 2: Get real weather.** Connect Open-Meteo and add loading, error, and retry states.
-- [ ] **Day 3: Use phone location.** Ask for permission and show weather for the phone's location.
+- [x] **Day 3: Use phone location.** Ask for permission, use the device coordinates, and show the current place name when available.
 - [ ] **Day 4: Search for a city.** Let people look up weather in another place.
 - [ ] **Day 5: Add forecasts.** Show real hourly and daily forecasts.
 - [ ] **Day 6: Handle rough edges.** Improve the app for different weather, lost internet, and denied location access.
