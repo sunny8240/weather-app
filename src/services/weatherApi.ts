@@ -5,12 +5,21 @@ export type Coordinates = {
     longitude: number;
 };
 
+export type GeoCityResult = {
+    name: string;
+    country: string;
+    admin1?: string;
+    latitude: number;
+    longitude: number;
+};
+
 export const PUNE_COORDINATES: Coordinates = {
     latitude: 18.5204,
     longitude: 73.8567,
 };
 
 const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
+const GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search";
 
 export async function fetchWeatherByCoordinates({
     latitude,
@@ -40,6 +49,47 @@ export async function fetchWeatherByCoordinates({
         pressure: data.current.surface_pressure,
         weatherCode: data.current.weather_code,
     };
+}
+
+export async function searchCitiesByName(query: string): Promise<GeoCityResult[]> {
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+        return [];
+    }
+
+    const searchParams = new URLSearchParams({
+        name: trimmed,
+        count: "5",
+        language: "en",
+        format: "json",
+    });
+
+    const response = await fetch(`${GEOCODING_API_URL}?${searchParams.toString()}`);
+
+    if (!response.ok) {
+        throw new Error("City search is unavailable right now.");
+    }
+
+    const data = (await response.json()) as {
+        results?: Array<{
+            name: string;
+            country: string;
+            admin1?: string;
+            latitude: number;
+            longitude: number;
+        }>;
+    };
+
+    return (
+        data.results?.map((result) => ({
+            name: result.name,
+            country: result.country,
+            admin1: result.admin1,
+            latitude: result.latitude,
+            longitude: result.longitude,
+        })) ?? []
+    );
 }
 
 export async function fetchPuneWeather(): Promise<CurrentWeather> {

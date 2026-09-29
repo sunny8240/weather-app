@@ -2,6 +2,8 @@ import {
   fetchPuneWeather,
   fetchWeatherByCoordinates,
   PUNE_COORDINATES,
+  searchCitiesByName,
+  type GeoCityResult,
 } from "@/services/weatherApi";
 import { CurrentWeather } from "@/types/weather";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +17,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -65,9 +68,16 @@ function formatLocationName(
 export default function HomeScreen() {
   const [weather, setWeather] = useState<CurrentWeather | null>(null);
   const [locationName, setLocationName] = useState("Pune, Maharashtra");
+  const [searchText, setSearchText] = useState("");
+  const [searchResults, setSearchResults] = useState<GeoCityResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pulseAnim = useMemo(() => new Animated.Value(0.7), []);
+
+  function formatCityLabel(city: GeoCityResult): string {
+    return [city.name, city.admin1, city.country].filter(Boolean).join(", ");
+  }
 
   async function loadWeather() {
     setIsLoading(true);
@@ -102,6 +112,62 @@ export default function HomeScreen() {
       setLocationName("Pune, Maharashtra");
       setWeather(await fetchPuneWeather());
       setError(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleCitySearch() {
+    const trimmed = searchText.trim();
+
+    if (!trimmed) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    setError(null);
+
+    try {
+      const results = await searchCitiesByName(trimmed);
+      setSearchResults(results);
+
+      if (results.length > 0) {
+        const selectedCity = results[0];
+        const nextLocationName = formatCityLabel(selectedCity);
+        setLocationName(nextLocationName);
+        setWeather(
+          await fetchWeatherByCoordinates({
+            latitude: selectedCity.latitude,
+            longitude: selectedCity.longitude,
+          }),
+        );
+      } else {
+        setError("No city matched your search. Try another name.");
+      }
+    } catch {
+      setError("We couldn't find that city right now.");
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  async function handleCitySelect(city: GeoCityResult) {
+    setSearchText(city.name);
+    setSearchResults([]);
+    setLocationName(formatCityLabel(city));
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      setWeather(
+        await fetchWeatherByCoordinates({
+          latitude: city.latitude,
+          longitude: city.longitude,
+        }),
+      );
+    } catch {
+      setError("The selected city could not be loaded.");
     } finally {
       setIsLoading(false);
     }
@@ -174,6 +240,42 @@ export default function HomeScreen() {
               {isLoading ? "Updating" : error ? "Offline" : "Live"}
             </Text>
           </View>
+        </View>
+
+        <View className="mt-5 rounded-[22px] border border-[#dfe9e2] bg-white p-3">
+          <Text className="text-[11px] font-semibold uppercase text-[#789087]">Search city</Text>
+          <View className="mt-2 flex-row items-center rounded-2xl border border-[#d7e1dc] bg-[#f7faf8] px-3 py-2">
+            <Ionicons name="search-outline" size={17} color="#52796c" />
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Type a city"
+              placeholderTextColor="#7f8f8a"
+              onSubmitEditing={handleCitySearch}
+              className="ml-2 flex-1 text-base text-[#1b2b26]"
+            />
+            <Pressable
+              onPress={handleCitySearch}
+              className="ml-2 rounded-full bg-[#365f51] px-3 py-1.5"
+              disabled={isSearching}
+            >
+              <Text className="text-xs font-semibold text-white">{isSearching ? "..." : "Search"}</Text>
+            </Pressable>
+          </View>
+
+          {searchResults.length > 0 ? (
+            <View className="mt-3 gap-2">
+              {searchResults.map((city) => (
+                <Pressable
+                  key={`${city.name}-${city.country}-${city.latitude}`}
+                  onPress={() => handleCitySelect(city)}
+                  className="rounded-xl border border-[#d7e1dc] bg-[#f5f9f7] p-2"
+                >
+                  <Text className="text-sm font-medium text-[#1b2b26]">{formatCityLabel(city)}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         <View className="pt-6">
