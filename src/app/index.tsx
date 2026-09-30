@@ -1,9 +1,9 @@
 import {
-  fetchPuneWeather,
-  fetchWeatherByCoordinates,
-  PUNE_COORDINATES,
-  searchCitiesByName,
-  type GeoCityResult,
+    fetchPuneWeather,
+    fetchWeatherByCoordinates,
+    PUNE_COORDINATES,
+    searchCitiesByName,
+    type GeoCityResult,
 } from "@/services/weatherApi";
 import { CurrentWeather } from "@/types/weather";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,25 +11,16 @@ import Feather from "@expo/vector-icons/Feather";
 import * as Location from "expo-location";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Animated,
-  Easing,
-  FlatList,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    Animated,
+    Easing,
+    FlatList,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const hourlyForecast = [
-  { time: "Now", temp: 28, icon: "sunny-outline" },
-  { time: "10 AM", temp: 29, icon: "sunny-outline" },
-  { time: "11 AM", temp: 30, icon: "partly-sunny-outline" },
-  { time: "12 PM", temp: 31, icon: "partly-sunny-outline" },
-  { time: "1 PM", temp: 32, icon: "sunny-outline" },
-  { time: "2 PM", temp: 32, icon: "sunny-outline" },
-];
 
 type WeatherIconName = keyof typeof Ionicons.glyphMap;
 
@@ -48,6 +39,34 @@ function getWeatherIcon(weatherCode: number): WeatherIconName {
   if ([95, 96, 99].includes(weatherCode)) return "thunderstorm-outline";
   if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) return "rainy-outline";
   return "cloudy-outline";
+}
+
+function formatHourLabel(timestamp: string, index: number): string {
+  if (index === 0) {
+    return "Now";
+  }
+
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return timestamp;
+  }
+
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric" }).format(date);
+}
+
+function formatDayLabel(dateString: string, index: number): string {
+  if (index === 0) {
+    return "Today";
+  }
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
 }
 
 function formatLocationName(
@@ -360,33 +379,70 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View className="flex-row items-end justify-between pb-4 pt-7">
-          <Text className="text-xl font-semibold text-[#1b2b26]">Hourly forecast</Text>
-          <Text className="text-[10px] font-semibold uppercase text-[#789087]">Today</Text>
-        </View>
-        <FlatList
-          data={hourlyForecast}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.time}
-          contentContainerStyle={{ paddingRight: 20 }}
-          renderItem={({ item }) => (
-            <View className={`mr-2.5 min-h-[108px] w-[72px] items-center justify-center rounded-xl border px-2 py-3 ${item.time === "Now" ? "border-[#365f51] bg-[#365f51]" : "border-[#d7e1dc] bg-white"}`}>
-              <Text className={`text-xs ${item.time === "Now" ? "font-semibold text-white" : "text-[#708078]"}`}>
-                {item.time}
-              </Text>
-              <Ionicons
-                name={item.icon as WeatherIconName}
-                size={24}
-                color={item.time === "Now" ? "#f4c66a" : "#d28a35"}
-                style={{ marginVertical: 10 }}
-              />
-              <Text className={`text-base font-semibold ${item.time === "Now" ? "text-white" : "text-[#1b2b26]"}`}>
-                {item.temp}°
-              </Text>
+        {weather ? (
+          <>
+            <View className="flex-row items-end justify-between pb-4 pt-7">
+              <Text className="text-xl font-semibold text-[#1b2b26]">Hourly forecast</Text>
+              <Text className="text-[10px] font-semibold uppercase text-[#789087]">Today</Text>
             </View>
-          )}
-        />
+            <FlatList
+              data={weather.hourlyForecast.slice(0, 8)}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item, index) => `${item.time}-${index}`}
+              contentContainerStyle={{ paddingRight: 20 }}
+              renderItem={({ item, index }) => {
+                const isNow = index === 0;
+                const label = formatHourLabel(item.time, index);
+
+                return (
+                  <View
+                    className={`mr-2.5 min-h-[108px] w-[72px] items-center justify-center rounded-xl border px-2 py-3 ${isNow ? "border-[#365f51] bg-[#365f51]" : "border-[#d7e1dc] bg-white"}`}
+                  >
+                    <Text className={`text-xs ${isNow ? "font-semibold text-white" : "text-[#708078]"}`}>
+                      {label}
+                    </Text>
+                    <Ionicons
+                      name={getWeatherIcon(item.weatherCode)}
+                      size={24}
+                      color={isNow ? "#f4c66a" : "#d28a35"}
+                      style={{ marginVertical: 10 }}
+                    />
+                    <Text className={`text-base font-semibold ${isNow ? "text-white" : "text-[#1b2b26]"}`}>
+                      {Math.round(item.temperature)}°
+                    </Text>
+                  </View>
+                );
+              }}
+            />
+
+            <View className="pb-4 pt-8">
+              <Text className="text-xl font-semibold text-[#1b2b26]">7-day forecast</Text>
+              <View className="mt-4 gap-2">
+                {weather.dailyForecast.map((day, index) => (
+                  <View
+                    key={day.date}
+                    className="flex-row items-center justify-between rounded-2xl border border-[#d7e1dc] bg-white px-3 py-3"
+                  >
+                    <Text className="w-12 text-sm font-medium text-[#1b2b26]">
+                      {formatDayLabel(day.date, index)}
+                    </Text>
+                    <View className="ml-2 flex-row items-center">
+                      <Ionicons name={getWeatherIcon(day.weatherCode)} size={18} color="#d28a35" />
+                      <Text className="ml-2 text-xs text-[#708078]">{getWeatherCondition(day.weatherCode)}</Text>
+                    </View>
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-sm font-semibold text-[#1b2b26]">
+                        {Math.round(day.maxTemperature)}°
+                      </Text>
+                      <Text className="text-sm text-[#708078]">{Math.round(day.minTemperature)}°</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

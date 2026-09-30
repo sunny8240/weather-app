@@ -30,6 +30,9 @@ export async function fetchWeatherByCoordinates({
         longitude: String(longitude),
         current:
             "temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,surface_pressure,weather_code",
+        hourly: "temperature_2m,weather_code",
+        daily: "weather_code,temperature_2m_max,temperature_2m_min",
+        forecast_days: "7",
         timezone: "auto",
     });
 
@@ -48,6 +51,17 @@ export async function fetchWeatherByCoordinates({
         windSpeed: data.current.wind_speed_10m,
         pressure: data.current.surface_pressure,
         weatherCode: data.current.weather_code,
+        hourlyForecast: data.hourly.time.map((time, index) => ({
+            time,
+            temperature: data.hourly.temperature_2m[index],
+            weatherCode: data.hourly.weather_code[index],
+        })),
+        dailyForecast: data.daily.time.map((date, index) => ({
+            date,
+            maxTemperature: data.daily.temperature_2m_max[index],
+            minTemperature: data.daily.temperature_2m_min[index],
+            weatherCode: data.daily.weather_code[index],
+        })),
     };
 }
 
@@ -72,13 +86,13 @@ export async function searchCitiesByName(query: string): Promise<GeoCityResult[]
     }
 
     const data = (await response.json()) as {
-        results?: Array<{
+        results?: {
             name: string;
             country: string;
             admin1?: string;
             latitude: number;
             longitude: number;
-        }>;
+        }[];
     };
 
     return (
