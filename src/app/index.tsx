@@ -9,7 +9,8 @@ import { CurrentWeather } from "@/types/weather";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import * as Location from "expo-location";
-import { useEffect, useMemo, useState } from "react";
+import LottieView from "lottie-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Animated,
     Easing,
@@ -24,6 +25,143 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 type WeatherIconName = keyof typeof Ionicons.glyphMap;
 
+const noInternetAnimation = {
+  v: "5.7.4",
+  fr: 60,
+  ip: 0,
+  op: 90,
+  w: 320,
+  h: 320,
+  nm: "NoInternet",
+  ddd: 0,
+  assets: [],
+  layers: [
+    {
+      ddd: 0,
+      ind: 1,
+      ty: 4,
+      nm: "Pulse",
+      sr: 1,
+      ks: {
+        o: { a: 0, k: 100 },
+        r: { a: 0, k: 0 },
+        p: { a: 0, k: [160, 160, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        s: {
+          a: 1,
+          k: [
+            { t: 0, s: [84, 84, 100] },
+            { t: 30, s: [104, 104, 100] },
+            { t: 60, s: [120, 120, 100] },
+            { t: 90, s: [84, 84, 100] },
+          ],
+        },
+      },
+      ao: 0,
+      shapes: [
+        {
+          ty: "gr",
+          it: [
+            { ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [200, 200] }, nm: "Ellipse Path 1" },
+            { ty: "fl", c: { a: 0, k: [0.74, 0.86, 0.79, 1] }, o: { a: 0, k: 100 }, r: 1, nm: "Fill 1" },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, sk: { a: 0, k: 0 }, sa: { a: 0, k: 0 } },
+          ],
+          nm: "Pulse Circle",
+        },
+      ],
+      ip: 0,
+      op: 90,
+      st: 0,
+      bm: 0,
+    },
+    {
+      ddd: 0,
+      ind: 2,
+      ty: 4,
+      nm: "Cloud",
+      sr: 1,
+      ks: {
+        o: { a: 0, k: 100 },
+        r: { a: 0, k: 0 },
+        p: {
+          a: 1,
+          k: [
+            { t: 0, s: [160, 170, 0] },
+            { t: 45, s: [168, 175, 0] },
+            { t: 90, s: [160, 170, 0] },
+          ],
+        },
+        a: { a: 0, k: [0, 0, 0] },
+        s: {
+          a: 1,
+          k: [
+            { t: 0, s: [100, 100, 100] },
+            { t: 45, s: [106, 106, 100] },
+            { t: 90, s: [100, 100, 100] },
+          ],
+        },
+      },
+      ao: 0,
+      shapes: [
+        {
+          ty: "gr",
+          it: [
+            { ty: "el", p: { a: 0, k: [-52, 32] }, s: { a: 0, k: [60, 60] }, nm: "Cloud 1" },
+            { ty: "el", p: { a: 0, k: [0, 18] }, s: { a: 0, k: [76, 64] }, nm: "Cloud 2" },
+            { ty: "el", p: { a: 0, k: [52, 28] }, s: { a: 0, k: [62, 52] }, nm: "Cloud 3" },
+            { ty: "fl", c: { a: 0, k: [1, 1, 1, 1] }, o: { a: 0, k: 100 }, r: 1, nm: "Cloud Fill" },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, sk: { a: 0, k: 0 }, sa: { a: 0, k: 0 } },
+          ],
+          nm: "Cloud Group",
+        },
+      ],
+      ip: 0,
+      op: 90,
+      st: 0,
+      bm: 0,
+    },
+    {
+      ddd: 0,
+      ind: 3,
+      ty: 4,
+      nm: "Cross",
+      sr: 1,
+      ks: {
+        o: { a: 0, k: 100 },
+        r: {
+          a: 1,
+          k: [
+            { t: 0, s: [0] },
+            { t: 35, s: [10] },
+            { t: 70, s: [-10] },
+            { t: 90, s: [0] },
+          ],
+        },
+        p: { a: 0, k: [160, 170, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        s: { a: 0, k: [100, 100, 100] },
+      },
+      ao: 0,
+      shapes: [
+        {
+          ty: "gr",
+          it: [
+            { ty: "rc", d: 1, s: { a: 0, k: [24, 118] }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 0 }, nm: "Bar 1" },
+            { ty: "rc", d: 1, s: { a: 0, k: [118, 24] }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 0 }, nm: "Bar 2" },
+            { ty: "fl", c: { a: 0, k: [0.22, 0.45, 0.39, 1] }, o: { a: 0, k: 100 }, r: 1, nm: "Cross Fill" },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, sk: { a: 0, k: 0 }, sa: { a: 0, k: 0 } },
+          ],
+          nm: "Cross Group",
+        },
+      ],
+      ip: 0,
+      op: 90,
+      st: 0,
+      bm: 0,
+    },
+  ],
+};
+
 function getWeatherCondition(weatherCode: number): string {
   if (weatherCode === 0) return "Clear";
   if ([1, 2, 3].includes(weatherCode)) return "Cloudy";
@@ -36,8 +174,11 @@ function getWeatherCondition(weatherCode: number): string {
 
 function getWeatherIcon(weatherCode: number): WeatherIconName {
   if (weatherCode === 0) return "sunny-outline";
-  if ([95, 96, 99].includes(weatherCode)) return "thunderstorm-outline";
+  if ([1, 2, 3].includes(weatherCode)) return "partly-sunny-outline";
+  if ([45, 48].includes(weatherCode)) return "cloudy-outline";
   if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) return "rainy-outline";
+  if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) return "snow-outline";
+  if ([95, 96, 99].includes(weatherCode)) return "thunderstorm-outline";
   return "cloudy-outline";
 }
 
@@ -92,15 +233,31 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const pulseAnim = useMemo(() => new Animated.Value(0.7), []);
 
   function formatCityLabel(city: GeoCityResult): string {
     return [city.name, city.admin1, city.country].filter(Boolean).join(", ");
   }
 
-  async function loadWeather() {
+  function getFriendlyErrorMessage(errorValue: unknown): string {
+    if (errorValue instanceof Error) {
+      const message = errorValue.message.toLowerCase();
+
+      if (message.includes("network") || message.includes("failed to fetch") || message.includes("internet")) {
+        return "No internet connection. Check your connection and try again.";
+      }
+
+      return errorValue.message;
+    }
+
+    return "Something went wrong while loading the weather.";
+  }
+
+  const loadWeather = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setLocationNotice(null);
 
     try {
       let latitude = PUNE_COORDINATES.latitude;
@@ -123,18 +280,28 @@ export default function HomeScreen() {
         });
 
         resolvedLocationName = formatLocationName(geoLocation);
+      } else if (status === "denied") {
+        setLocationNotice("Location access is off, so the app is showing Pune weather.");
+      } else {
+        setLocationNotice("Location permission is unavailable right now, so Pune weather is being shown.");
       }
 
       setLocationName(resolvedLocationName);
       setWeather(await fetchWeatherByCoordinates({ latitude, longitude }));
     } catch {
       setLocationName("Pune, Maharashtra");
-      setWeather(await fetchPuneWeather());
-      setError(null);
+      setLocationNotice("We could not reach your current location, so the app is showing Pune weather.");
+
+      try {
+        setWeather(await fetchPuneWeather());
+      } catch (fallbackError) {
+        setError(getFriendlyErrorMessage(fallbackError));
+        setWeather(null);
+      }
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   async function handleCitySearch() {
     const trimmed = searchText.trim();
@@ -164,8 +331,8 @@ export default function HomeScreen() {
       } else {
         setError("No city matched your search. Try another name.");
       }
-    } catch {
-      setError("We couldn't find that city right now.");
+    } catch (error) {
+      setError(getFriendlyErrorMessage(error));
     } finally {
       setIsSearching(false);
     }
@@ -176,6 +343,7 @@ export default function HomeScreen() {
     setSearchResults([]);
     setLocationName(formatCityLabel(city));
     setError(null);
+    setLocationNotice(null);
     setIsLoading(true);
 
     try {
@@ -185,20 +353,20 @@ export default function HomeScreen() {
           longitude: city.longitude,
         }),
       );
-    } catch {
-      setError("The selected city could not be loaded.");
+    } catch (error) {
+      setError(getFriendlyErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    const startLoad = async () => {
-      await loadWeather();
-    };
+    const timeoutId = setTimeout(() => {
+      void loadWeather();
+    }, 0);
 
-    void startLoad();
-  }, []);
+    return () => clearTimeout(timeoutId);
+  }, [loadWeather]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -282,6 +450,12 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
+          {locationNotice ? (
+            <View className="mt-3 rounded-xl border border-[#e7d7a9] bg-[#fff7dc] px-3 py-2">
+              <Text className="text-sm text-[#7a5d11]">{locationNotice}</Text>
+            </View>
+          ) : null}
+
           {searchResults.length > 0 ? (
             <View className="mt-3 gap-2">
               {searchResults.map((city) => (
@@ -300,9 +474,15 @@ export default function HomeScreen() {
         <View className="pt-6">
           <Text className="text-[11px] font-semibold uppercase text-[#789087]">Current conditions</Text>
           {error ? (
-            <View className="mt-5 min-h-[180px] justify-center rounded-[28px] border border-[#ead7d3] bg-[#fbf5f4] p-5">
-              <Text className="text-base leading-6 text-[#812f28]">{error}</Text>
-              <Pressable className="mt-5 self-start rounded-full bg-[#365f51] px-4 py-2" onPress={loadWeather}>
+            <View className="mt-5 min-h-[220px] justify-center rounded-[28px] border border-[#ead7d3] bg-[#fbf5f4] p-5">
+              <LottieView
+                source={noInternetAnimation}
+                autoPlay
+                loop
+                style={{ width: 180, height: 180, alignSelf: "center" }}
+              />
+              <Text className="mt-2 text-base leading-6 text-center text-[#812f28]">{error}</Text>
+              <Pressable className="mt-5 self-center rounded-full bg-[#365f51] px-4 py-2" onPress={loadWeather}>
                 <Text className="text-sm font-semibold text-white">Try again</Text>
               </Pressable>
             </View>
