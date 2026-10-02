@@ -2,9 +2,17 @@
 
 I'm building this app one step at a time to learn mobile app development with React Native, Expo, and TypeScript. I already have experience building web apps, so this project is a chance to put that knowledge to work on a phone app.
 
-## What the app does so far
+## What the app does
 
-The home screen shows current weather for Pune, India. It includes the temperature, conditions, feels-like temperature, humidity, wind, pressure, and a row of hourly forecast cards. The current weather now comes from the Open-Meteo weather service. The hourly cards still use sample data and will be connected later.
+The home screen shows current weather for the device location, with Pune as a fallback. It includes the temperature, conditions, feels-like temperature, humidity, wind, pressure, real hourly forecast cards, and a real seven-day forecast.
+
+The app also supports:
+
+- searching for a city and loading its weather
+- location permission handling with a Pune fallback
+- loading states with an animated progress treatment
+- offline and API failure states with a Lottie animation
+- retrying after a failed weather request
 
 ## Run the app
 
@@ -25,11 +33,13 @@ Follow the instructions in the terminal to open the app on a phone or simulator.
 - [x] **Day 4: Search for a city.** Let people look up a city and see the weather for that place.
 - [x] **Day 5: Add forecasts.** Show real hourly and daily forecasts.
 - [x] **Day 6: Handle rough edges.** Improve the app for different weather, lost internet, and denied location access.
-- [ ] **Day 7: Review and share. and Deploy** Check the app, tidy the code, update this README, and share the finished progress on GitHub.
+- [x] **Day 7: Review and share.** Review the app, tidy the code, update this README, and push the finished progress to GitHub.
 
 ## Project files
 
-The screens are in `src/app`. The main weather screen is `src/app/index.tsx`, and `src/app/_layout.tsx` sets up navigation.
+The screens are in `src/app`. The main weather screen is `src/app/index.tsx`, and `src/app/_layout.tsx` sets up navigation. Weather and city search requests live in `src/services/weatherApi.ts`, and shared response types live in `src/types/weather.ts`.
+
+The app uses [Open-Meteo](https://open-meteo.com/) for weather and geocoding data. No API key is required.
 
 ## Checks
 
@@ -38,4 +48,17 @@ Run these commands to check the code:
 ```bash
 npm run lint
 npx tsc --noEmit
+```
+
+## Share the app
+
+The project is available on GitHub:
+
+https://github.com/sunny8240/weather-app
+
+To open the project locally:
+
+```bash
+npm install
+npx expo start
 ```
